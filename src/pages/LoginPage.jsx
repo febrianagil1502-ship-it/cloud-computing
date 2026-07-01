@@ -166,6 +166,24 @@ export default function LoginPage() {
                   ? 'Buat Akun'
                   : 'Masuk'}
             </button>
+
+            {!isRegistering && (
+              <button
+                type="button"
+                className="btn btn-outline btn-full"
+                onClick={async () => {
+                  setSubmitting(true)
+                  const { error } = await useAuth().signInGuest()
+                  if (error) setError(translateError(error.message))
+                  else navigate('/dashboard', { replace: true })
+                  setSubmitting(false)
+                }}
+                disabled={submitting}
+                style={{ marginTop: '0.5rem' }}
+              >
+                👀 Coba Simulasi Dulu (Guest)
+              </button>
+            )}
           </form>
 
           <div className="auth-switch">

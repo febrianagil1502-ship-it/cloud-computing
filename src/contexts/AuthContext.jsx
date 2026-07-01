@@ -6,9 +6,12 @@ const AuthContext = createContext({
   user: null,
   profile: null,
   loading: true,
+  isGuest: false,
   signUp: async () => {},
   login: async () => {},
   signOut: async () => {},
+  signInGuest: async () => {},
+  upgradeGuest: async () => {},
 })
 
 export const AuthProvider = ({ children }) => {
@@ -123,14 +126,51 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // ── Guest Mode ──
+  const signInGuest = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInAnonymously()
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error('signInGuest error:', error.message)
+      return { data: null, error }
+    }
+  }
+
+  const upgradeGuest = async (email, password, fullName) => {
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        email,
+        password,
+        data: { full_name: fullName }
+      })
+      if (error) throw error
+      
+      // Jika berhasil di-upgrade, update profile juga jika diperlukan
+      if (data.user) {
+         await supabase.from('profiles').update({ full_name: fullName }).eq('id', data.user.id)
+      }
+      return { data, error: null }
+    } catch (error) {
+      console.error('upgradeGuest error:', error.message)
+      return { data: null, error }
+    }
+  }
+
+  const isGuest = user?.is_anonymous || false
+
   const value = {
     session,
     user,
     profile,
     loading,
+    isGuest,
     signUp,
     login,
     signOut,
+    signInGuest,
+    upgradeGuest,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -16,11 +16,17 @@ function formatDate(dateStr) {
 }
 
 export default function DashboardPage() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, isGuest, signOut, upgradeGuest } = useAuth()
   const [categories, setCategories] = useState([])
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // State untuk form upgrade guest
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradeData, setUpgradeData] = useState({ email: '', password: '', fullName: '' })
+  const [upgrading, setUpgrading] = useState(false)
+  const [upgradeError, setUpgradeError] = useState(null)
 
   useEffect(() => { loadData() }, [])
 
@@ -51,7 +57,22 @@ export default function DashboardPage() {
 
   const balance = totalIncome - totalExpense
 
-  const displayName = profile?.full_name || user?.email || 'Pengguna'
+  const displayName = profile?.full_name || user?.email || (isGuest ? 'Guest User' : 'Pengguna')
+
+  const handleUpgrade = async (e) => {
+    e.preventDefault()
+    setUpgrading(true)
+    setUpgradeError(null)
+    const { error } = await upgradeGuest(upgradeData.email, upgradeData.password, upgradeData.fullName)
+    if (error) {
+      setUpgradeError('Gagal menyimpan: ' + error.message)
+    } else {
+      setShowUpgradeModal(false)
+      alert('Berhasil! Akun Anda kini permanen. Data simulasi Anda telah tersimpan.')
+      window.location.reload()
+    }
+    setUpgrading(false)
+  }
 
   return (
     <div className="dashboard-page">
@@ -76,8 +97,23 @@ export default function DashboardPage() {
       <main className="dashboard-main animate-in">
         <p className="page-title">Dashboard</p>
         <p className="page-subtitle">
-          Halo, {profile?.full_name || 'Pengguna'} 👋 — Ini ringkasan keuangan Anda.
+          Halo, {profile?.full_name || (isGuest ? 'Tamu' : 'Pengguna')} 👋 — Ini ringkasan keuangan Anda.
         </p>
+
+        {isGuest && (
+          <div className="alert alert-warn" style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>
+              <strong>Mode Tamu Aktif:</strong> Anda sedang dalam simulasi. Data Anda akan hilang jika Anda keluar (logout).
+            </span>
+            <button 
+              className="btn btn-primary btn-sm" 
+              onClick={() => setShowUpgradeModal(true)}
+              style={{ whiteSpace: 'nowrap', marginLeft: '1rem' }}
+            >
+              Simpan Akun Saya
+            </button>
+          </div>
+        )}
 
         {error && <div className="alert alert-error" style={{ marginBottom: '1.25rem' }}>{error}</div>}
 
@@ -216,6 +252,60 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
+
+      {/* Modal Upgrade Guest */}
+      {showUpgradeModal && (
+        <div className="modal-backdrop">
+          <div className="modal-content">
+            <h2>Simpan Data Anda</h2>
+            <p style={{ marginBottom: '1rem', color: 'var(--gray-600)', fontSize: '0.9rem' }}>
+              Daftarkan email dan kata sandi Anda agar data simulasi ini tidak hilang dan dapat diakses kembali nanti.
+            </p>
+            <form onSubmit={handleUpgrade}>
+              <div className="form-group">
+                <label>Nama Lengkap</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={upgradeData.fullName}
+                  onChange={(e) => setUpgradeData({...upgradeData, fullName: e.target.value})}
+                  placeholder="John Doe"
+                />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input 
+                  type="email" 
+                  required 
+                  value={upgradeData.email}
+                  onChange={(e) => setUpgradeData({...upgradeData, email: e.target.value})}
+                  placeholder="nama@email.com"
+                />
+              </div>
+              <div className="form-group">
+                <label>Kata Sandi</label>
+                <input 
+                  type="password" 
+                  required 
+                  minLength={6}
+                  value={upgradeData.password}
+                  onChange={(e) => setUpgradeData({...upgradeData, password: e.target.value})}
+                  placeholder="Minimal 6 karakter"
+                />
+              </div>
+              
+              {upgradeError && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{upgradeError}</div>}
+              
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setShowUpgradeModal(false)} disabled={upgrading}>Batal</button>
+                <button type="submit" className="btn btn-primary" disabled={upgrading}>
+                  {upgrading ? 'Menyimpan...' : 'Simpan Permanen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
