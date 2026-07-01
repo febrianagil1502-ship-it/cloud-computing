@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function LoginPage() {
-  const { login, signUp } = useAuth()
+  const { login, signUp, signInGuest } = useAuth()
   const navigate = useNavigate()
 
   const [isRegistering, setIsRegistering] = useState(false)
@@ -173,10 +173,15 @@ export default function LoginPage() {
                 className="btn btn-outline btn-full"
                 onClick={async () => {
                   setSubmitting(true)
-                  const { error } = await useAuth().signInGuest()
-                  if (error) setError(translateError(error.message))
-                  else navigate('/dashboard', { replace: true })
-                  setSubmitting(false)
+                  try {
+                    const { error } = await signInGuest()
+                    if (error) throw error
+                    navigate('/dashboard', { replace: true })
+                  } catch (err) {
+                    setError(translateError(err.message))
+                  } finally {
+                    setSubmitting(false)
+                  }
                 }}
                 disabled={submitting}
                 style={{ marginTop: '0.5rem' }}
